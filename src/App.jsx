@@ -16,13 +16,50 @@ function generateMaze(cols, rows) {
   return grid;
 }
 
-export default function App() {
-  const cols = 15;
-  const rows = 15;
+function generateCoins(cols, rows, mazeGrid) {
+  const grid = [];
+  for (let y = 0; y < rows; y++) {
+    const row = [];
+    for (let x = 0; x < cols; x++) {
+      const isEmpty = mazeGrid[y]?.[x] === 0;
+      row.push(isEmpty && Math.random() > 0.7 ? 1 : 0);
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+
+const cols = Math.floor(Math.random() * (20 - 10)) + 10;
+const rows = Math.floor(Math.random() * (20 - 10)) + 10;
+
+function App() {
+  function collectCoin(x, y) {
+    setCoinsGrid((prevGrid) => {
+      const newGrid = prevGrid.map((row) => [...row]);
+      if (newGrid[y]?.[x] === 1) {
+        setCoins((prev) => prev + 1);
+        if (coinsGrid[y - 1] && coinsGrid[y - 1][x] === 1) {
+          coinsGrid[y - 1][x] = 0;
+        }
+      }
+      return newGrid;
+    });
+  }
   const offsetX = cols / 2;
   const offsetY = rows / 2;
+  const maxX = cols;
+  const maxY = rows;
+  const minX = -1;
+  const minY = -1;
 
   const [mazeGrid] = useState(generateMaze(cols, rows));
+
+  const [coins, setCoins] = useState(0);
+
+  const [coinsGrid, setCoinsGrid] = useState(
+    generateCoins(cols, rows, mazeGrid),
+  );
+
   const [playerPos, setPlayerPos] = useState({ x: 0, y: 0 });
   const [monsters, setMonsters] = useState([
     { x: cols - 1, y: 0 },
@@ -33,10 +70,27 @@ export default function App() {
     const handleKey = (e) => {
       setPlayerPos((pos) => {
         let { x, y } = pos;
-        if (e.key === "ArrowUp" && !mazeGrid[y - 1]?.[x]) y -= 1;
-        if (e.key === "ArrowDown" && !mazeGrid[y + 1]?.[x]) y += 1;
-        if (e.key === "ArrowLeft" && !mazeGrid[y]?.[x - 1]) x -= 1;
-        if (e.key === "ArrowRight" && !mazeGrid[y]?.[x + 1]) x += 1;
+
+        if (e.key === "ArrowUp" && y > minY && !mazeGrid[y - 1]?.[x]) {
+          y -= 1;
+          collectCoin(x, y);
+        }
+
+        if (e.key === "ArrowDown" && y < maxY && !mazeGrid[y + 1]?.[x]) {
+          y += 1;
+          collectCoin(x, y);
+        }
+
+        if (e.key === "ArrowLeft" && x > minX && !mazeGrid[y]?.[x - 1]) {
+          x -= 1;
+          collectCoin(x, y);
+        }
+
+        if (e.key === "ArrowRight" && x < maxX && !mazeGrid[y]?.[x + 1]) {
+          x += 1;
+          collectCoin(x, y);
+        }
+
         return { x, y };
       });
     };
@@ -56,41 +110,77 @@ export default function App() {
           let newY = m.y;
 
           if (Math.abs(dx) > Math.abs(dy)) {
-            newX += dx > 0 && !mazeGrid[m.y]?.[m.x + 1] ? 1 : dx < 0 && !mazeGrid[m.y]?.[m.x - 1] ? -1 : 0;
+            newX +=
+              dx > 0 && !mazeGrid[m.y]?.[m.x + 1]
+                ? 1
+                : dx < 0 && !mazeGrid[m.y]?.[m.x - 1]
+                  ? -1
+                  : 0;
           } else {
-            newY += dy > 0 && !mazeGrid[m.y + 1]?.[m.x] ? 1 : dy < 0 && !mazeGrid[m.y - 1]?.[m.x] ? -1 : 0;
+            newY +=
+              dy > 0 && !mazeGrid[m.y + 1]?.[m.x]
+                ? 1
+                : dy < 0 && !mazeGrid[m.y - 1]?.[m.x]
+                  ? -1
+                  : 0;
           }
 
           return { x: newX, y: newY };
-        })
+        }),
       );
     }, 500);
     return () => clearInterval(interval);
   }, [playerPos, mazeGrid]);
 
   return (
-    <div style={{ width: "100vw", height: "100vh" }}>
-      <Canvas orthographic camera={{ position: [0, 0, 10], zoom: 50 }} style={{ backgroundColor: "black" }}>
+    <div id="canvas-container" style={{ width: "100vw", height: "100vh" }}>
+      <h1>coins {coins}</h1>
+      <Canvas
+        orthographic
+        camera={{ position: [0, 0, 10], zoom: 40 }}
+        style={{ backgroundColor: "black" }}
+      >
         <ambientLight intensity={0.5} />
         <PanZoom2D>
           {mazeGrid.map((row, y) =>
-            row.map((cell, x) =>
-              cell ? (
-                <mesh key={`${x}-${y}`} position={[x - offsetX, -(y - offsetY), 0]}>
+            row.map((cell, x) => {
+              if (cell === 0) return null;
+              return (
+                <mesh
+                  key={`tile-${x}-${y}`}
+                  position={[x - offsetX, -(y - offsetY), 0]}
+                >
                   <planeGeometry args={[1, 1]} />
                   <meshBasicMaterial color="red" />
                 </mesh>
-              ) : null
-            )
+              );
+            }),
           )}
-
-          <Player position={{ x: playerPos.x - offsetX, y: -(playerPos.y - offsetY) }} />
-
+          {coinsGrid.map((row, y) =>
+            row.map((cell, x) => {
+              if (cell === 0) return null;
+              return (
+                <mesh
+                  key={`coin-${x}-${y}`}
+                  position={[x - offsetX, -(y - offsetY), 0]}
+                >
+                  <planeGeometry args={[0.1, 0.1]} />
+                  <meshBasicMaterial color="yellow" />
+                </mesh>
+              );
+            }),
+          )}
+          <mesh
+            position={[playerPos.x - offsetX, -(playerPos.y - offsetY), 0.1]}
+          >
+            <planeGeometry args={[0.8, 0.8]} />
+            <meshBasicMaterial color="blue" />
+          </mesh>
           {monsters.map((m, i) => (
             <Monster
               key={i}
               position={{ x: m.x - offsetX, y: -(m.y - offsetY) }}
-              textureIndex={i} // 0 или 1
+              textureIndex={i}
             />
           ))}
         </PanZoom2D>
@@ -98,3 +188,5 @@ export default function App() {
     </div>
   );
 }
+
+export default App;
