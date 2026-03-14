@@ -1,4 +1,0 @@
-1 prompt:
-
-how to create a system to count your current score and your high score
-
