@@ -15,10 +15,12 @@ function generateMaze(cols, rows) {
   return grid;
 }
 
+const cols = Math.floor(Math.random() * (20 - 10)) + 10;
+const rows = Math.floor(Math.random() * (20 - 10)) + 10;
+
 function App() {
   const [count, setCount] = useState(0);
-  const cols = Math.floor(Math.random() * (20 - 10)) + 10;
-  const rows = Math.floor(Math.random() * (20 - 10)) + 10;
+
   const [mazeGrid] = useState(generateMaze(cols, rows));
   const [playerPos, setPlayerPos] = useState({ x: 0, y: 0 });
   const offsetX = cols / 2;
@@ -29,7 +31,6 @@ function App() {
       e.preventDefault();
       setPlayerPos((pos) => {
         let { x, y } = pos;
-        console.log(x, y, mazeGrid[y - 1]?.[x]);
         if (e.key === "ArrowUp" && !mazeGrid[y - 1]?.[x]) y -= 1;
         if (e.key === "ArrowDown" && !mazeGrid[y + 1]?.[x]) y += 1;
         if (e.key === "ArrowLeft" && !mazeGrid[y]?.[x - 1]) x -= 1;
@@ -52,25 +53,40 @@ function App() {
       >
         <ambientLight intensity={0.5} />
         <PanZoom2D>
-          {mazeGrid.map((row, y) =>
-            row.map((cell, x) => {
-              if (cell === 0) return null;
-              return (
-                <mesh
-                  key={`${x}-${y}`}
-                  position={[x - offsetX, -(y - offsetY), 0]}
-                >
-                  <planeGeometry args={[1, 1]} />
-                  <meshBasicMaterial color="red" />
-                </mesh>
-              );
-            }),
-          )}
-          <mesh
-            position={[playerPos.x - offsetX, -(playerPos.y - offsetY), 0.1]}
-          >
-            <planeGeometry args={[0.8, 0.8]} />
-            <meshBasicMaterial color="blue" />
+          <mesh position={[8 - offsetX, -(8 - offsetY), 0.1]}>
+            <planeGeometry args={[rows + 2, cols + 2]} />
+            <meshBasicMaterial color="red" />
+            {console.log(cols, rows)}
+
+            <mesh position={[8 - offsetX, -(8 - offsetY), 0.1]}>
+              <planeGeometry args={[19, 17]} />
+              <meshBasicMaterial color="black" />
+
+              {mazeGrid.map((row, y) =>
+                row.map((cell, x) => {
+                  if (cell === 0) return null;
+                  return (
+                    <mesh
+                      key={`${x}-${y}`}
+                      position={[x - offsetX, -(y - offsetY), 0]}
+                    >
+                      <planeGeometry args={[1, 1]} />
+                      <meshBasicMaterial color="red" />
+                    </mesh>
+                  );
+                }),
+              )}
+              <mesh
+                position={[
+                  playerPos.x - offsetX,
+                  -(playerPos.y - offsetY),
+                  0.1,
+                ]}
+              >
+                <planeGeometry args={[0.8, 0.8]} />
+                <meshBasicMaterial color="blue" />
+              </mesh>
+            </mesh>
           </mesh>
         </PanZoom2D>
       </Canvas>
